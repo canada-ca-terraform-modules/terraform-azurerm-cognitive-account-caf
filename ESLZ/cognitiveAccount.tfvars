@@ -4,17 +4,17 @@
 # Adjust placeholders (subscription IDs, resource names, locations) as needed.
 ###############################################
  
-# Required naming/context variables
-env               = "G3Dc"          # Must match pattern Upper-lower-Upper-lower per validation
-group             = "ABC"          # Alphanumeric only
-project           = "Portal"        # Alphanumeric only
-userDefinedString = "Project123"     # Alphanumeric only
+# Required naming/context variables (usually passed by L0/L1 via Terragrunt root.hcl)
+# env               = "G3Dc"          # Must match pattern Upper-lower-Upper-lower per validation
+# group             = "ABC"          # Alphanumeric only
+# project           = "Portal"        # Alphanumeric only
+# userDefinedString = "Project123"     # Alphanumeric only
  
-# Resource group object (expected: name & location)
-resource_group = {
-    name     = "rg-apps-portal-devp"
-    location = "canadacentral"
-}
+# # Resource group object (expected: name & location)
+# resource_group = {
+#     name     = "rg-apps-portal-devp"
+#     location = "canadacentral"
+# }
  
 # Cognitive account configuration
 cognitive_account = {
