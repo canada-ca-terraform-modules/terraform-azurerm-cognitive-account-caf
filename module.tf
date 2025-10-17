@@ -5,7 +5,7 @@ locals {
 resource "azurerm_cognitive_account" "cognitive-account" {
     name                = local.name
     resource_group_name = var.resource_group.name
-    location            = var.resource_group.location
+    location            = try(var.location, var.resource_group.location)
     sku_name            = try(local.ca.sku_name, "S0")
     kind                = try(local.ca.kind, "OpenAI")
 

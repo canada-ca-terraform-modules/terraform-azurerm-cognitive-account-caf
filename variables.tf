@@ -3,6 +3,11 @@ variable "resource_group" {
     type = any
 }
 
+variable "location" {
+    description = "Azure region for resource deployment."
+    type        = string
+}
+
 variable "cognitive_account" {
     description = "Cognitive account configuration object."
     type = object({
