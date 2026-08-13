@@ -1,6 +1,5 @@
 config {
   call_module_type = "local"
-  force             = false
 }
 
 rule "terraform_required_version" {
