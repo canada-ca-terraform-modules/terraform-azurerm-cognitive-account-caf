@@ -1,11 +1,22 @@
 variable "resource_group" {
-  description = "Resource group object containing name and location."
-  type        = any
+  description = "Resource group object containing name and (optional) location. location is required here only when var.location is not supplied."
+  type = object({
+    name     = string
+    location = optional(string)
+  })
 }
 
 variable "location" {
-  description = "Azure region for resource deployment."
+  description = "Azure region for resource deployment. Optional - falls back to var.resource_group.location when unset."
   type        = string
+  default     = null
+}
+
+variable "custom_question_answering_search_service_key" {
+  description = "Admin key of the Azure Cognitive Search service backing Custom Question Answering (only relevant when cognitive_account.kind = \"TextAnalytics\"). Kept out of the cognitive_account object so it can be marked sensitive - object-type attributes cannot carry sensitive = true individually."
+  type        = string
+  default     = null
+  sensitive   = true
 }
 
 variable "cognitive_account" {
@@ -23,15 +34,14 @@ variable "cognitive_account" {
     local_auth_enabled                 = optional(bool)
     tags                               = optional(map(string))
     # New in azurerm >= 5.0 (also valid on 4.x; module previously did not expose these)
-    fqdns                                        = optional(list(string))
-    project_management_enabled                   = optional(bool)
-    qna_runtime_endpoint                         = optional(string)
-    custom_question_answering_search_service_id  = optional(string)
-    custom_question_answering_search_service_key = optional(string)
-    metrics_advisor_aad_client_id                = optional(string)
-    metrics_advisor_aad_tenant_id                = optional(string)
-    metrics_advisor_super_user_name              = optional(string)
-    metrics_advisor_website_name                 = optional(string)
+    fqdns                                       = optional(list(string))
+    project_management_enabled                  = optional(bool)
+    qna_runtime_endpoint                        = optional(string)
+    custom_question_answering_search_service_id = optional(string)
+    metrics_advisor_aad_client_id               = optional(string)
+    metrics_advisor_aad_tenant_id               = optional(string)
+    metrics_advisor_super_user_name             = optional(string)
+    metrics_advisor_website_name                = optional(string)
     identity = optional(object({
       type         = string
       identity_ids = optional(list(string))
@@ -99,7 +109,7 @@ variable "userDefinedString" {
 }
 
 variable "tags" {
-  description = "Tags to be applied to the function app"
+  description = "Tags to be applied to the Cognitive Services Account"
   type        = map(string)
   default     = {}
 }

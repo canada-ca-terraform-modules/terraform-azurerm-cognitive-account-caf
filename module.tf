@@ -2,12 +2,12 @@ locals {
   ca = var.cognitive_account
 }
 
-resource "azurerm_cognitive_account" "cognitive-account" {
+resource "azurerm_cognitive_account" "cognitive_account" {
   name                = local.name
   resource_group_name = var.resource_group.name
-  location            = try(var.location, var.resource_group.location)
-  sku_name            = try(local.ca.sku_name, "S0")
-  kind                = try(local.ca.kind, "OpenAI")
+  location            = var.location != null ? var.location : var.resource_group.location
+  sku_name            = local.ca.sku_name
+  kind                = local.ca.kind
 
   custom_subdomain_name              = try(local.ca.custom_subdomain_name, null)
   public_network_access_enabled      = try(local.ca.public_network_access_enabled, null)
@@ -20,7 +20,7 @@ resource "azurerm_cognitive_account" "cognitive-account" {
   project_management_enabled                   = try(local.ca.project_management_enabled, null)
   qna_runtime_endpoint                         = try(local.ca.qna_runtime_endpoint, null)
   custom_question_answering_search_service_id  = try(local.ca.custom_question_answering_search_service_id, null)
-  custom_question_answering_search_service_key = try(local.ca.custom_question_answering_search_service_key, null)
+  custom_question_answering_search_service_key = var.custom_question_answering_search_service_key
   metrics_advisor_aad_client_id                = try(local.ca.metrics_advisor_aad_client_id, null)
   metrics_advisor_aad_tenant_id                = try(local.ca.metrics_advisor_aad_tenant_id, null)
   metrics_advisor_super_user_name              = try(local.ca.metrics_advisor_super_user_name, null)
@@ -77,6 +77,41 @@ resource "azurerm_cognitive_account" "cognitive-account" {
     content {
       storage_account_id = storage.value.storage_account_id
       identity_client_id = try(storage.value.identity_client_id, null)
+    }
+  }
+
+  # kind-specific argument guards - the provider accepts these unconditionally at the
+  # schema level, but rejects the combination at apply time with a generic API error.
+  # Surfacing the mistake here gives a readable message at plan time instead.
+  lifecycle {
+    precondition {
+      condition     = local.ca.network_injection == null || local.ca.kind == "AIServices"
+      error_message = "cognitive_account.network_injection is only supported when kind = \"AIServices\"."
+    }
+    precondition {
+      condition     = local.ca.project_management_enabled != true || local.ca.kind == "AIServices"
+      error_message = "cognitive_account.project_management_enabled can only be set to true when kind = \"AIServices\"."
+    }
+    precondition {
+      condition     = local.ca.dynamic_throttling_enabled == null || !contains(["OpenAI", "AIServices"], local.ca.kind)
+      error_message = "cognitive_account.dynamic_throttling_enabled cannot be set when kind is \"OpenAI\" or \"AIServices\"."
+    }
+    precondition {
+      condition = (
+        local.ca.qna_runtime_endpoint == null &&
+        local.ca.custom_question_answering_search_service_id == null &&
+        var.custom_question_answering_search_service_key == null
+      ) || local.ca.kind == "QnAMaker" || local.ca.kind == "TextAnalytics"
+      error_message = "cognitive_account.qna_runtime_endpoint / custom_question_answering_search_service_id / custom_question_answering_search_service_key are only meaningful when kind = \"QnAMaker\" or \"TextAnalytics\"."
+    }
+    precondition {
+      condition = (
+        local.ca.metrics_advisor_aad_client_id == null &&
+        local.ca.metrics_advisor_aad_tenant_id == null &&
+        local.ca.metrics_advisor_super_user_name == null &&
+        local.ca.metrics_advisor_website_name == null
+      ) || local.ca.kind == "MetricsAdvisor"
+      error_message = "cognitive_account.metrics_advisor_* arguments are only meaningful when kind = \"MetricsAdvisor\"."
     }
   }
 }

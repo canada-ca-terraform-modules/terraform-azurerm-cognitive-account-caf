@@ -24,7 +24,7 @@ run "baseline_apply" {
     }
   }
   assert {
-    condition     = azurerm_cognitive_account.cognitive-account.name == "DvPc-ECT-acct-oai-aais"
+    condition     = azurerm_cognitive_account.cognitive_account.name == "DvPc-ECT-acct-oai-aais"
     error_message = "Baseline apply: unexpected resource name"
   }
 }
@@ -40,11 +40,11 @@ run "upgrade_plan_no_replacement" {
     }
   }
   assert {
-    condition     = azurerm_cognitive_account.cognitive-account.name == "DvPc-ECT-acct-oai-aais"
+    condition     = azurerm_cognitive_account.cognitive_account.name == "DvPc-ECT-acct-oai-aais"
     error_message = "Resource name must be unchanged after upgrade"
   }
   assert {
-    condition     = tolist(azurerm_cognitive_account.cognitive-account.fqdns)[0] == "example.com"
+    condition     = tolist(azurerm_cognitive_account.cognitive_account.fqdns)[0] == "example.com"
     error_message = "fqdns must be set on upgraded plan"
   }
 }
