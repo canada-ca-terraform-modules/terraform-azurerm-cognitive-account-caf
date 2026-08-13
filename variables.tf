@@ -1,83 +1,105 @@
 variable "resource_group" {
-    description = "Resource group object containing name and location."
-    type = any
+  description = "Resource group object containing name and location."
+  type        = any
 }
 
 variable "location" {
-    description = "Azure region for resource deployment."
-    type        = string
+  description = "Azure region for resource deployment."
+  type        = string
 }
 
 variable "cognitive_account" {
-    description = "Cognitive account configuration object."
-    type = object({
-        sku_name                          = optional(string)
-        kind                              = optional(string)
-        custom_subdomain_name             = optional(string)
-        public_network_access_enabled     = optional(bool)
-        outbound_network_access_restricted = optional(bool)
-        dynamic_throttling_enabled        = optional(bool)
-        local_auth_enabled                = optional(bool)
-        tags                              = optional(map(string))
-        identity = optional(object({
-            type         = string
-            identity_ids = optional(list(string))
-        }))
-        customer_managed_key = optional(object({
-            key_vault_key_id   = string
-            identity_client_id = optional(string)
-        }))
-        network_acls = optional(object({
-            default_action        = string
-            ip_rules              = optional(list(string))
-            virtual_network_rules = optional(list(object({ subnet_id = string })))
-        }))
-        storage_accounts = optional(list(object({
-            storage_account_id = string
-            identity_client_id = optional(string)
-        })))
-    })
+  description = "Cognitive account configuration object."
+  type = object({
+    # Defaults embedded in the type (not try()) — object-type optional() attributes are
+    # coerced to null when omitted by the caller, so a try(local.ca.x, default) fallback
+    # never fires; the default must live here to actually apply.
+    sku_name                           = optional(string, "S0")
+    kind                               = optional(string, "OpenAI")
+    custom_subdomain_name              = optional(string)
+    public_network_access_enabled      = optional(bool)
+    outbound_network_access_restricted = optional(bool)
+    dynamic_throttling_enabled         = optional(bool)
+    local_auth_enabled                 = optional(bool)
+    tags                               = optional(map(string))
+    # New in azurerm >= 5.0 (also valid on 4.x; module previously did not expose these)
+    fqdns                                        = optional(list(string))
+    project_management_enabled                   = optional(bool)
+    qna_runtime_endpoint                         = optional(string)
+    custom_question_answering_search_service_id  = optional(string)
+    custom_question_answering_search_service_key = optional(string)
+    metrics_advisor_aad_client_id                = optional(string)
+    metrics_advisor_aad_tenant_id                = optional(string)
+    metrics_advisor_super_user_name              = optional(string)
+    metrics_advisor_website_name                 = optional(string)
+    identity = optional(object({
+      type         = string
+      identity_ids = optional(list(string))
+    }))
+    customer_managed_key = optional(object({
+      key_vault_key_id   = string
+      identity_client_id = optional(string)
+    }))
+    network_acls = optional(object({
+      default_action = string
+      bypass         = optional(string)
+      ip_rules       = optional(list(string))
+      virtual_network_rules = optional(list(object({
+        subnet_id                            = string
+        ignore_missing_vnet_service_endpoint = optional(bool)
+      })))
+    }))
+    # New in azurerm >= 5.0: agent network injection, only applicable when kind = "AIServices"
+    network_injection = optional(object({
+      scenario  = string
+      subnet_id = string
+    }))
+    storage_accounts = optional(list(object({
+      storage_account_id = string
+      identity_client_id = optional(string)
+    })))
+  })
 }
 
 # Additional variables referenced in locals.tf for naming convention
 variable "env" {
-    description = "Deployment environment code (e.g., dev, test, prod)."
-    type        = string
-    validation {
-        condition     = can(regex("^[A-Z][0-9,a-z][A-Z][0-9,a-z]$", var.env))
-        error_message = "env must be exactly 4 characters matching pattern Upper-lower-Upper-lower (e.g., AbCd) and contain only alphanumeric characters."
-    }
+  description = "Deployment environment code (e.g., dev, test, prod)."
+  type        = string
+  validation {
+    condition     = can(regex("^[A-Z][0-9,a-z][A-Z][0-9,a-z]$", var.env))
+    error_message = "env must be exactly 4 characters matching pattern Upper-lower-Upper-lower (e.g., AbCd) and contain only alphanumeric characters."
+  }
 }
 
 variable "group" {
-    description = "Business or organizational group identifier used in resource naming."
-    type        = string
-    validation {
-        condition   = can(regex("^[A-Za-z0-9]+$", var.group))
-        error_message = "group may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
-    }
+  description = "Business or organizational group identifier used in resource naming."
+  type        = string
+  validation {
+    condition     = can(regex("^[A-Za-z0-9]+$", var.group))
+    error_message = "group may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
+  }
 }
 
 variable "project" {
-    description = "Short project identifier used in resource naming."
-    type        = string
-    validation {
-        condition   = can(regex("^[A-Za-z0-9]+$", var.project))
-        error_message = "project may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
-    }
+  description = "Short project identifier used in resource naming."
+  type        = string
+  validation {
+    condition     = can(regex("^[A-Za-z0-9]+$", var.project))
+    error_message = "project may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
+  }
 }
 
 variable "userDefinedString" {
-    description = "Free-form suffix/purpose string included in resource names (no spaces)."
-    type        = string
-    validation {
-        condition   = can(regex("^[A-Za-z0-9]+$", var.userDefinedString))
-        error_message = "userDefinedString may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
-    }
+  description = "Free-form suffix/purpose string included in resource names (no spaces)."
+  type        = string
+  validation {
+    condition     = can(regex("^[A-Za-z0-9]+$", var.userDefinedString))
+    error_message = "userDefinedString may only contain alphanumeric characters (A-Z, a-z, 0-9) with no spaces or special characters."
+  }
 }
 
 variable "tags" {
   description = "Tags to be applied to the function app"
-  type = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
