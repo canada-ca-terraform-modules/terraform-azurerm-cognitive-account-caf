@@ -1,0 +1,66 @@
+name: Live-test orphan sweeper
+
+# Nightly backstop for ticket 13: live-test.yml's concurrency guard
+# (cancel-in-progress: true) defeats its own in-job `if: always()` destroy
+# step, since a cancelled run skips all remaining steps. This workflow lists
+# sandbox resource groups tagged `pr-number` (test_dependencies.tf), checks
+# whether that PR is now closed/merged, and destroys anything a cancelled or
+# crashed run left behind.
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    environment: live-test
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sweep orphaned live-test resource groups
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # The sandbox subscription is shared across module repos (ticket
+          # 03), so filter to resource groups tagged for this repo
+          # specifically - a bare `pr-number` match could otherwise collide
+          # with another repo's PR numbering.
+          groups=$(az group list --tag pr-number -o json | jq --arg repo "$GH_REPO" '[.[] | select(.tags.repository == $repo)]')
+          echo "Found $(echo "$groups" | jq 'length') sandbox resource group(s) for $GH_REPO tagged with pr-number."
+
+          echo "$groups" | jq -c '.[]' | while read -r rg; do
+            name=$(echo "$rg" | jq -r '.name')
+            pr_number=$(echo "$rg" | jq -r '.tags["pr-number"] // empty')
+
+            if [[ -z "$pr_number" ]]; then
+              echo "Skipping $name: no readable pr-number tag."
+              continue
+            fi
+
+            if ! pr_state=$(gh pr view "$pr_number" --json state -q .state 2>/dev/null); then
+              echo "Skipping $name: could not look up PR #$pr_number (not found or not accessible)."
+              continue
+            fi
+
+            if [[ "$pr_state" == "OPEN" ]]; then
+              echo "Keeping $name: PR #$pr_number is still open."
+              continue
+            fi
+
+            echo "Destroying $name: PR #$pr_number is $pr_state (orphaned by a cancelled/crashed run)."
+            az group delete --name "$name" --yes --no-wait
+          done
