@@ -1,4 +1,5 @@
 terraform {
+  # touched to satisfy live-test.yml's pull_request paths filter for the workflow-only PR
   required_version = ">= 1.9"
   required_providers {
     azurerm = {
