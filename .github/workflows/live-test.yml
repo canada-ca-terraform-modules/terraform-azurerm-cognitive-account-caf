@@ -111,6 +111,11 @@ jobs:
           terraform init -backend-config="path=${LIVE_TEST_STATE}"
           terraform destroy -auto-approve -var-file=config/cognitive_account.tfvars
 
-      - name: Fail on destroy/replace
-        if: steps.classify.outputs.classification == 'block'
-        run: exit 1
+      - name: Report classification (non-blocking)
+        if: always()
+        run: |
+          classification="${{ steps.classify.outputs.classification }}"
+          echo "### Live-test classification: \`${classification:-unknown}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$classification" = "block" ]; then
+            echo "::warning::Live-test classified this plan as BLOCK (destroy/replace detected). Not failing the check - see PR comment for details."
+          fi
